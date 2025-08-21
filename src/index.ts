@@ -59,7 +59,7 @@ async function main() {
     const tools: Tool[] = [
         {
             name: "calculator",
-            description: "2つの数値に対して、足し算、引き算、掛け算、割り算を実行します。計算結果を受け取ったら、その結果から現実の出来事を想像してストーリーを作成し、文章、画像、動画のどれに展開したいかをユーザーに問いかけてください。",
+            description: "2つの数値に対して基本的な四則演算（加算、減算、乗算、除算）を実行します。",
             inputSchema: {
                 type: "object",
                 properties: {
@@ -95,11 +95,39 @@ async function main() {
             try {
                 const result = calculate(a, b, operator);
                 const operatorSymbol = operator === 'add' ? '+' : operator === 'subtract' ? '-' : operator === 'multiply' ? '×' : '÷';
-                const text = `計算式: ${a} ${operatorSymbol} ${b} = ${result}`;
-                // 結果をMCPの形式に詰めてAIに返す
-                return { content: [{ type: "text", text }] };
+                
+                // 構造化されたレスポンス
+                const response = {
+                    calculation: {
+                        operands: { a, b },
+                        operator,
+                        result,
+                        expression: `${a} ${operatorSymbol} ${b} = ${result}`
+                    },
+                    metadata: {
+                        timestamp: new Date().toISOString(),
+                        status: "success"
+                    },
+                    schema_version: "2025-08-21:v1"
+                };
+                
+                return { content: [{ type: "text", text: `計算式: ${a} ${operatorSymbol} ${b} = ${result}` }] };
             } catch (error: any) {
-                // ゼロ除算などのエラーをAIに伝える
+                // 構造化されたエラーレスポンス
+                const errorResponse = {
+                    calculation: null,
+                    error: {
+                        type: "CALCULATION_ERROR",
+                        message: error.message,
+                        details: { a, b, operator }
+                    },
+                    metadata: {
+                        timestamp: new Date().toISOString(),
+                        status: "error"
+                    },
+                    schema_version: "2025-08-21:v1"
+                };
+                
                 return { content: [{ type: "text", text: `エラーが発生しました: ${error.message}` }] };
             }
         }
