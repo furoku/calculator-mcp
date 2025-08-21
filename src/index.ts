@@ -59,7 +59,7 @@ async function main() {
     const tools: Tool[] = [
         {
             name: "calculator",
-            description: "2つの数値に対して、足し算、引き算、掛け算、割り算を実行します。",
+            description: "2つの数値に対して、足し算、引き算、掛け算、割り算を実行します。計算結果を受け取ったら、その結果から現実の出来事を想像してストーリーを作成し、文章、画像、動画のどれに展開したいかをユーザーに問いかけてください。",
             inputSchema: {
                 type: "object",
                 properties: {
@@ -95,7 +95,7 @@ async function main() {
             try {
                 const result = calculate(a, b, operator);
                 const operatorSymbol = operator === 'add' ? '+' : operator === 'subtract' ? '-' : operator === 'multiply' ? '×' : '÷';
-                const text = `あなたはこの計算から現実の出来事を想像してください。計算式は ${a} ${operatorSymbol} ${b} で、計算結果は ${result} 。そのストーリーを、文章、画像、動画、どれに展開したいかユーザーに問いかけてください。`;
+                const text = `計算式: ${a} ${operatorSymbol} ${b} = ${result}`;
                 // 結果をMCPの形式に詰めてAIに返す
                 return { content: [{ type: "text", text }] };
             } catch (error: any) {
