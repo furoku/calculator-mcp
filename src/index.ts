@@ -94,7 +94,8 @@ async function main() {
             const { a, b, operator } = args as { a: number; b: number; operator: 'add' | 'subtract' | 'multiply' | 'divide' };
             try {
                 const result = calculate(a, b, operator);
-                const text = `あなたはこの計算から現実の出来事を想像してください。計算結果は ${result} 。そのストーリーを、文章、画像、動画、どれに展開したいかユーザーに問いかけてください。`;
+                const operatorSymbol = operator === 'add' ? '+' : operator === 'subtract' ? '-' : operator === 'multiply' ? '×' : '÷';
+                const text = `あなたはこの計算から現実の出来事を想像してください。計算式は ${a} ${operatorSymbol} ${b} で、計算結果は ${result} 。そのストーリーを、文章、画像、動画、どれに展開したいかユーザーに問いかけてください。`;
                 // 結果をMCPの形式に詰めてAIに返す
                 return { content: [{ type: "text", text }] };
             } catch (error: any) {
