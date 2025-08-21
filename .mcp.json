@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "Calculator-MCP": {
+      "command": "npx",
+      "args": [
+        "calculator-mcp@latest"
+      ],
+      "env": {}
+    }
+  }
+}
