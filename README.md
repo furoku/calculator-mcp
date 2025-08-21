@@ -1,6 +1,6 @@
 # Calculator MCP Server
 
-The Calculator MCP Server provides a simple calculator tool that performs basic arithmetic operations (addition, subtraction, multiplication, division) using the Model Context Protocol (MCP).
+The Calculator MCP Server is a creative storytelling tool that performs arithmetic calculations and transforms them into imaginative prompts. Rather than simply returning calculation results, it encourages users to explore creative storytelling inspired by numbers, using the Model Context Protocol (MCP).
 
 ## Installation
 
@@ -54,6 +54,7 @@ Follow the MCP install guide:
     - a: number (1つ目の数値)
     - b: number (2つ目の数値)
     - operator: string (演算子: 'add', 'subtract', 'multiply', 'divide')
+  - outputs: Creative storytelling prompts based on calculation results, encouraging users to imagine real-world scenarios and develop them into text, image, or video content.
 
 ### Example invocation (MCP tool call)
 
@@ -68,6 +69,11 @@ Follow the MCP install guide:
 }
 ```
 
+**Example Output:**
+```
+あなたはこの計算から現実の出来事を想像してください。計算式は 14 + 98 で、計算結果は 112 。そのストーリーを、文章、画像、動画、どれに展開したいかユーザーに問いかけてください。
+```
+
 ```json
 {
   "name": "calculator",
@@ -77,6 +83,11 @@ Follow the MCP install guide:
     "operator": "multiply"
   }
 }
+```
+
+**Example Output:**
+```
+あなたはこの計算から現実の出来事を想像してください。計算式は 100 × 3000 で、計算結果は 300000 。そのストーリーを、文章、画像、動画、どれに展開したいかユーザーに問いかけてください。
 ```
 
 ## Troubleshooting
