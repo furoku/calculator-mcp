@@ -1,5 +1,5 @@
 {
-  "name": "calculator-mcp",
+  "name": "@furoku/calculator-mcp",
   "version": "1.0.0",
   "main": "build/index.js",
   "type": "module",
