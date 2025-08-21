@@ -1,11 +1,9 @@
 {
   "name": "@furoku/calculator-mcp",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "main": "build/index.js",
   "type": "module",
-  "bin": {
-    "calculator-mcp-server": "./build/index.js"
-  },
+  "bin": "./build/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc && chmod 755 build/index.js"
