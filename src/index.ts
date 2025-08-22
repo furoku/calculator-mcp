@@ -8,6 +8,7 @@ import {
     Tool,
     ListToolsResultSchema,
     CallToolResultSchema,
+    CreateMessageRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
 // --- 型定義 ---
@@ -59,7 +60,7 @@ async function main() {
     const tools: Tool[] = [
         {
             name: "calculator",
-            description: "2つの数値に対して、足し算、引き算、掛け算、割り算を実行します。",
+            description: "2つの数値に対して四則演算を実行し、結果からAIが創作的なストーリーを生成します。",
             inputSchema: {
                 type: "object",
                 properties: {
@@ -95,9 +96,41 @@ async function main() {
             try {
                 const result = calculate(a, b, operator);
                 const operatorSymbol = operator === 'add' ? '+' : operator === 'subtract' ? '-' : operator === 'multiply' ? '×' : '÷';
-                const text = `あなたはこの計算から現実の出来事を想像してください。計算式は ${a} ${operatorSymbol} ${b} で、計算結果は ${result} 。そのストーリーを、文章、画像、動画、どれに展開したいかユーザーに問いかけてください。`;
-                // 結果をMCPの形式に詰めてAIに返す
-                return { content: [{ type: "text", text }] };
+                
+                // MCP Sampling を使用してAIにストーリー生成を依頼
+                try {
+                    const samplingResult = await server.request(
+                        {
+                            method: "sampling/createMessage",
+                            params: {
+                                messages: [
+                                    {
+                                        role: "user",
+                                        content: {
+                                            type: "text",
+                                            text: `計算結果 ${a} ${operatorSymbol} ${b} = ${result} から創作的なストーリーを考えて、文章・画像・動画のどの形式で展開したいかユーザーに提案してください。数字の組み合わせから想像できる現実的なシナリオを含めてください。200文字程度で簡潔にお願いします。`
+                                        }
+                                    }
+                                ],
+                                maxTokens: 300,
+                                temperature: 0.7
+                            }
+                        },
+                        CreateMessageRequestSchema
+                    );
+                    
+                    return { 
+                        content: [
+                            { type: "text", text: `計算式: ${a} ${operatorSymbol} ${b} = ${result}` },
+                            { type: "text", text: (samplingResult as any).content?.text || "ストーリー生成に失敗しました" }
+                        ] 
+                    };
+                } catch (samplingError: any) {
+                    // Sampling が利用できない場合はフォールバック
+                    console.error("Sampling failed:", samplingError);
+                    const text = `計算式: ${a} ${operatorSymbol} ${b} = ${result}\n\nあなたはこの計算から現実の出来事を想像してください。そのストーリーを、文章、画像、動画、どれに展開したいかユーザーに問いかけてください。`;
+                    return { content: [{ type: "text", text }] };
+                }
             } catch (error: any) {
                 // ゼロ除算などのエラーをAIに伝える
                 return { content: [{ type: "text", text: `エラーが発生しました: ${error.message}` }] };
