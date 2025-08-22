@@ -101,7 +101,7 @@ async function main() {
                 try {
                     const samplingResult = await server.request(
                         {
-                            method: "sampling/createMessage",
+                            method: "sampling/create",
                             params: {
                                 messages: [
                                     {
@@ -119,10 +119,16 @@ async function main() {
                         CreateMessageRequestSchema
                     );
                     
+                    // 正しいレスポンス構造に対応
+                    const samplingResponse = samplingResult as any;
+                    const generatedText = samplingResponse.result?.content?.type === "text" 
+                        ? samplingResponse.result.content.text 
+                        : "ストーリー生成に失敗しました";
+                    
                     return { 
                         content: [
                             { type: "text", text: `計算式: ${a} ${operatorSymbol} ${b} = ${result}` },
-                            { type: "text", text: (samplingResult as any).content?.text || "ストーリー生成に失敗しました" }
+                            { type: "text", text: generatedText }
                         ] 
                     };
                 } catch (samplingError: any) {
