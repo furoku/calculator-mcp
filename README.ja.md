@@ -1,5 +1,13 @@
 # Calculator MCP サーバー
 
+> このリポジトリは **MCP サーバーのテンプレート化準備中** です。新しいサーバーを派生させる場合は以下を参照してください:
+> - `README.template.md` を開き、プレースホルダを置換
+> - `package.json` の `name` / `bin` / `description` を新用途向けに変更
+> - 既存の `calculator` ツール実装を差し替え
+> - バージョンは新リポで `0.1.0` から開始
+>
+> 派生後はこの案内を削除して構いません。
+
 Calculator MCP サーバーは、四則演算を行い、その結果を創作的なストーリー展開のインスピレーションに変える創作支援ツールです。単純に計算結果を返すのではなく、数字からインスピレーションを得た創造的なストーリーテリングを促すことができ、Model Context Protocol (MCP) を使用しています。
 
 ## インストール
@@ -98,3 +106,6 @@ MCP インストールガイドに従ってください：
 ## 参考資料
 - [Model Context Protocol Quickstart](https://modelcontextprotocol.io/quickstart/server)
 - [MCP SDK Docs](https://modelcontextprotocol.io/docs/sdk)
+
+## ライセンス
+MIT License (`LICENSE` を参照)。

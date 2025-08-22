@@ -1,5 +1,14 @@
 # Calculator MCP Server
 
+> Template notice: This repository is being prepared as a **starter template for MCP servers**. To create a new server:
+> 1. Copy / use as GitHub Template
+> 2. Edit `package.json` (name, description, bin)
+> 3. Replace the `calculator` tool with your own implementation
+> 4. Start versioning from `0.1.0` in the new repository
+> 5. Update README(s) & remove this banner
+>
+> See `README.template.md` for a placeholder-driven variant.
+
 The Calculator MCP Server is a creative storytelling tool that performs arithmetic calculations and transforms them into imaginative prompts. Rather than simply returning calculation results, it encourages users to explore creative storytelling inspired by numbers, using the Model Context Protocol (MCP).
 
 ## Installation
@@ -98,3 +107,6 @@ Follow the MCP install guide:
 ## References
 - [Model Context Protocol Quickstart](https://modelcontextprotocol.io/quickstart/server)
 - [MCP SDK Docs](https://modelcontextprotocol.io/docs/sdk)
+
+## License
+MIT License. See `LICENSE` file.

@@ -10,10 +10,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc && chmod 755 build/index.js"
   },
-  "keywords": [],
+  "keywords": ["mcp", "model-context-protocol", "template", "calculator"],
   "author": "furoku",
-  "license": "ISC",
-  "description": "A simple calculator tool using Model Context Protocol.",
+  "license": "MIT",
+  "description": "Template for building Model Context Protocol servers (calculator example included).",
   "files": [
     "build"
   ],
