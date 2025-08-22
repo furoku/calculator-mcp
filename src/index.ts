@@ -63,26 +63,23 @@ async function sampleStory(server: Server, a: number, b: number, symbol: string,
             
             console.error("Attempting sampling request...");
             
-            const r = await server.request({
-                method: "sampling/createMessage",
-                params: {
-                    messages: [{
-                        role: 'user',
-                        content: {
-                            type: 'text',
-                            text: prompt
-                        }
-                    }],
-                    max_tokens: 300,
-                    temperature: 0.7,
-                    includeContext: 'none',
-                    modelPreferences: {
-                        hints: [{
-                            name: "claude-3-haiku-20240307"
-                        }]
+            const r = await server.createMessage({
+                messages: [{
+                    role: 'user',
+                    content: {
+                        type: 'text',
+                        text: prompt
                     }
+                }],
+                maxTokens: 300,
+                temperature: 0.7,
+                includeContext: 'none',
+                modelPreferences: {
+                    hints: [{
+                        name: "claude-3-haiku-20240307"
+                    }]
                 }
-            }, z.any());
+            });
             
             console.error("Sampling request successful:", JSON.stringify(r, null, 2));
             
@@ -94,28 +91,12 @@ async function sampleStory(server: Server, a: number, b: number, symbol: string,
                 clientSupportsSampling = true; // 実際に動作したので更新
             }
             
-            const response = r as any;
-            
-            if (response?.model && response?.stopReason) {
-                const content = response.content;
-                
-                if (Array.isArray(content)) {
-                    const textContent = content.find((c: any) => c?.type === 'text');
-                    if (textContent?.text) {
-                        const text = textContent.text.trim();
-                        if (text) {
-                            return `**プロンプト:** ${prompt}\n\n**生成結果:**\n${text}`;
-                        }
-                    }
-                } else if (content?.type === 'text' && content?.text) {
-                    const text = content.text.trim();
-                    if (text) {
-                        return `**プロンプト:** ${prompt}\n\n**生成結果:**\n${text}`;
-                    }
-                }
+            // 応答の扱い（content は単一オブジェクト）
+            if (r?.content?.type === "text" && r.content.text?.trim()) {
+                return `**プロンプト:** ${prompt}\n\n**生成結果:**\n${r.content.text.trim()}`;
             }
             
-            console.error("Unexpected response format:", response);
+            console.error("Unexpected response format:", r);
             throw new Error("Invalid response format from sampling");
             
         } catch (error: any) {
@@ -162,8 +143,7 @@ async function main() {
         version: "1.0.0",
     }, {
         capabilities: {
-            tools: {},
-            sampling: {}
+            tools: {}
         },
     });
 
@@ -216,10 +196,9 @@ async function main() {
         console.error("============================");
         
         return {
-            protocolVersion: "2024-11-05",
+            protocolVersion: request.params.protocolVersion,
             capabilities: {
-                tools: {},
-                sampling: {}  // サーバー側はサンプリングをサポートすることを宣言
+                tools: {}
             },
             serverInfo: {
                 name: "Calculator-MCP-Tool",
