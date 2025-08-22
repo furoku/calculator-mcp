@@ -13,6 +13,7 @@ import {
 // クライアントのsampling機能サポート状況を追跡
 let clientSupportsSampling = false;
 let samplingTestedSuccessfully = false;  // 実際のサンプリング成功を記録
+let vsCodeEnvironment = false;  // VS Code環境かどうかを追跡
 
 type Operator = 'add' | 'subtract' | 'multiply' | 'divide';
 const SYMBOL: Record<Operator, string> = { add: '+', subtract: '-', multiply: '×', divide: '÷' };
@@ -47,76 +48,97 @@ function calculate(a: number, b: number, operator: Operator): number {
     }
 }
 
-// フォールバックストーリー生成
+// フォールバックストーリー生成（改善版）
 async function sampleStory(server: Server, a: number, b: number, symbol: string, result: number): Promise<string | null> {
     console.error(`Sampling requested for: ${a} ${symbol} ${b} = ${result}`);
+    console.error(`clientSupportsSampling: ${clientSupportsSampling}, samplingTestedSuccessfully: ${samplingTestedSuccessfully}`);
 
-    // 1) まずクライアント経由の sampling を試みる
-    // 初期化時に false でも、実行時には試してみる（VS Code の場合）
-    if (clientSupportsSampling || !samplingTestedSuccessfully) {
+    // 1) サンプリング機能を試みる
+    // VS Code環境では初期化時の報告に関わらずサンプリングを試みる
+    const shouldAttemptSampling = clientSupportsSampling || vsCodeEnvironment || !samplingTestedSuccessfully;
+    
+    if (shouldAttemptSampling) {
         try {
             const prompt = `結果 ${a} ${symbol} ${b} = ${result} を題材に短い創作的提案をください (200文字以内)`;
+            
+            console.error("Attempting sampling request...");
+            
             const r = await server.request({
-                method: "sampling/createMessage",  // 修正: 正しいメソッド名
+                method: "sampling/createMessage",
                 params: {
                     messages: [{
                         role: 'user',
-                        content: {  // 修正: 単一オブジェクト形式
+                        content: {
                             type: 'text',
                             text: prompt
                         }
                     }],
-                    max_tokens: 300,  // 修正: スネークケース
+                    max_tokens: 300,
                     temperature: 0.7,
-                    includeContext: 'none',  // コンテキストを含めない設定
+                    includeContext: 'none',
                     modelPreferences: {
                         hints: [{
-                            name: "claude-3-haiku-20240307"  // 軽量モデルを推奨
+                            name: "claude-3-haiku-20240307"
                         }]
                     }
                 }
             }, z.any());
-            console.error("Sampling request successful:", r);
             
-            // 成功したらフラグを更新
+            console.error("Sampling request successful:", JSON.stringify(r, null, 2));
+            
+            // サンプリングが成功したことを記録
             samplingTestedSuccessfully = true;
-            clientSupportsSampling = true;
+            if (!clientSupportsSampling) {
+                console.error("Note: Sampling worked despite clientSupportsSampling being false");
+                console.error("This is expected behavior in VS Code - sampling requires user consent at runtime");
+                clientSupportsSampling = true; // 実際に動作したので更新
+            }
             
-            // 修正: 正しいレスポンス解析
             const response = r as any;
+            
             if (response?.model && response?.stopReason) {
-                // 正常なレスポンス
                 const content = response.content;
+                
                 if (Array.isArray(content)) {
                     const textContent = content.find((c: any) => c?.type === 'text');
                     if (textContent?.text) {
-                        return `**プロンプト:** ${prompt}\n\n**生成結果:**\n${textContent.text.trim()}`;
+                        const text = textContent.text.trim();
+                        if (text) {
+                            return `**プロンプト:** ${prompt}\n\n**生成結果:**\n${text}`;
+                        }
                     }
                 } else if (content?.type === 'text' && content?.text) {
-                    return `**プロンプト:** ${prompt}\n\n**生成結果:**\n${content.text.trim()}`;
+                    const text = content.text.trim();
+                    if (text) {
+                        return `**プロンプト:** ${prompt}\n\n**生成結果:**\n${text}`;
+                    }
                 }
             }
+            
+            console.error("Unexpected response format:", response);
+            throw new Error("Invalid response format from sampling");
+            
         } catch (error: any) {
-            console.error("Sampling request failed with details:", {
-                error: error.message,
-                stack: error.stack,
-                code: error.code
+            console.error("Sampling request failed:", {
+                message: error.message,
+                code: error.code,
+                details: error
             });
             
-            // 初回テスト失敗を記録
-            if (!samplingTestedSuccessfully) {
-                samplingTestedSuccessfully = true;
+            // エラーコードでサポート状況を判断
+            if (error.code === 'MethodNotFound' || error.code === 'UnsupportedOperation') {
                 clientSupportsSampling = false;
-                console.error("Sampling test failed - will use fallback for future requests");
+                samplingTestedSuccessfully = true; // テスト済みで非対応と確定
+                vsCodeEnvironment = false; // VS Codeではないか、古いバージョンの可能性
+            } else if (error.message?.includes('User denied') || error.message?.includes('cancelled')) {
+                // ユーザーが拒否した場合
+                console.error("User denied sampling permission - will use fallback");
             }
-            // フォールバックに進む
+            // それ以外のエラーは再試行可能
         }
-    } else {
-        console.error("Client does not support sampling capability, using local fallback");
     }
 
-    // 2) ローカルの簡易サンプラー（クライアント未対応やリクエスト失敗時のフォールバック）
-    //    マニュアルの「サンプリングの流れ」を手軽に試せるよう、簡単なテンプレート生成を行う。
+    // 2) ローカルの簡易サンプラー
     console.error("Using local fallback sampler");
     
     const templates = [
@@ -127,7 +149,6 @@ async function sampleStory(server: Server, a: number, b: number, symbol: string,
     
     const selectedTemplate = templates[Math.floor(Math.random() * templates.length)];
     
-    // 200文字以内に整形
     if (selectedTemplate.length > 200) {
         return selectedTemplate.slice(0, 197) + '...';
     }
@@ -173,20 +194,32 @@ async function main() {
         },
     ];
 
-    // 初期化ハンドラーを追加してクライアントのcapabilityを確認
+    // 初期化ハンドラー（デバッグ情報を追加）
     server.setRequestHandler(InitializeRequestSchema, async (request) => {
         const clientCapabilities = request.params.capabilities;
         clientSupportsSampling = !!clientCapabilities?.sampling;
         
-        console.error("Full client capabilities:", JSON.stringify(request.params, null, 2));
+        // VS Code環境の検出
+        const clientInfo = request.params.clientInfo;
+        if (clientInfo?.name && clientInfo.name.toLowerCase().includes('vscode')) {
+            vsCodeEnvironment = true;
+            console.error("VS Code environment detected - sampling may work despite initial capability report");
+        }
+        
+        console.error("=== Initialize Debug Info ===");
+        console.error("Full request params:", JSON.stringify(request.params, null, 2));
         console.error("Client capabilities:", JSON.stringify(clientCapabilities, null, 2));
-        console.error("Sampling support:", clientSupportsSampling);
+        console.error("Sampling capability reported:", clientSupportsSampling);
+        console.error("VS Code environment:", vsCodeEnvironment);
+        console.error("Client info:", JSON.stringify(clientInfo, null, 2));
+        console.error("Protocol version:", request.params.protocolVersion);
+        console.error("============================");
         
         return {
             protocolVersion: "2024-11-05",
             capabilities: {
                 tools: {},
-                sampling: {}
+                sampling: {}  // サーバー側はサンプリングをサポートすることを宣言
             },
             serverInfo: {
                 name: "Calculator-MCP-Tool",
