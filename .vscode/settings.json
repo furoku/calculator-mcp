@@ -1,0 +1,9 @@
+{
+    "chat.mcp.serverSampling": {
+        "url-context-mcp/.vscode/mcp.json: Calculator-MCP": {
+            "allowedModels": [
+                "copilot/gpt-4.1"
+            ]
+        }
+    }
+}

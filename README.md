@@ -63,7 +63,7 @@ Follow the MCP install guide:
     - a: number (1つ目の数値)
     - b: number (2つ目の数値)
     - operator: string (演算子: 'add', 'subtract', 'multiply', 'divide')
-  - outputs: Creative storytelling prompts based on calculation results, encouraging users to imagine real-world scenarios and develop them into text, image, or video content.
+  - outputs: Creative storytelling prompts based on calculation results when AI sampling is enabled. When sampling is disabled, returns only the calculation formula and result (e.g., "計算式: 1 + 1 = 2").
 
 ### Example invocation (MCP tool call)
 
@@ -78,25 +78,23 @@ Follow the MCP install guide:
 }
 ```
 
-**Example Output:**
+**Example Output (with AI Sampling enabled):**
 ```
-あなたはこの計算から現実の出来事を想像してください。計算式は 14 + 98 で、計算結果は 112 。そのストーリーを、文章、画像、動画、どれに展開したいかユーザーに問いかけてください。
+計算式: 14 + 98 = 112
+
+この計算結果から、とても興味深いストーリーを想像できそうですね。例えば：
+- 14人のチームが98人の新メンバーと合流して、112人の大きなプロジェクトチームになる話
+- 14個のアイデアと98個のひらめきが組み合わさって、112通りの創造的な解決策を生み出す物語
+
+このストーリーを以下のどの形で展開したいですか？
+1. 文章 - 詳細な物語として書き上げる
+2. 画像 - ビジュアルで表現する  
+3. 動画 - 動きのある映像作品として構想する
 ```
 
-```json
-{
-  "name": "calculator",
-  "arguments": {
-    "a": 100,
-    "b": 3000,
-    "operator": "multiply"
-  }
-}
+**Example Output (without AI Sampling):**
 ```
-
-**Example Output:**
-```
-あなたはこの計算から現実の出来事を想像してください。計算式は 100 × 3000 で、計算結果は 300000 。そのストーリーを、文章、画像、動画、どれに展開したいかユーザーに問いかけてください。
+計算式: 14 + 98 = 112
 ```
 
 ## Troubleshooting

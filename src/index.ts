@@ -128,8 +128,7 @@ async function main() {
                 } catch (samplingError: any) {
                     // Sampling が利用できない場合はフォールバック
                     console.error("Sampling failed:", samplingError);
-                    const text = `計算式: ${a} ${operatorSymbol} ${b} = ${result}\n\nあなたはこの計算から現実の出来事を想像してください。そのストーリーを、文章、画像、動画、どれに展開したいかユーザーに問いかけてください。`;
-                    return { content: [{ type: "text", text }] };
+                    return { content: [{ type: "text", text: `計算式: ${a} ${operatorSymbol} ${b} = ${result}` }] };
                 }
             } catch (error: any) {
                 // ゼロ除算などのエラーをAIに伝える
