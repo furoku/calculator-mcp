@@ -55,28 +55,47 @@ async function sampleStory(server: Server, a: number, b: number, symbol: string,
         try {
             const prompt = `結果 ${a} ${symbol} ${b} = ${result} を題材に短い創作的提案をください (200文字以内)`;
             const r = await server.request({
-                method: "sampling/complete",
+                method: "sampling/createMessage",  // 修正: 正しいメソッド名
                 params: {
                     messages: [{
                         role: 'user',
-                        content: [{ type: 'text', text: prompt }]
+                        content: {  // 修正: 単一オブジェクト形式
+                            type: 'text',
+                            text: prompt
+                        }
                     }],
-                    maxTokens: 300,
-                    temperature: 0.7
+                    max_tokens: 300,  // 修正: スネークケース
+                    temperature: 0.7,
+                    includeContext: 'none',  // コンテキストを含めない設定
+                    modelPreferences: {
+                        hints: [{
+                            name: "claude-3-haiku-20240307"  // 軽量モデルを推奨
+                        }]
+                    }
                 }
             }, z.any());
             console.error("Sampling request successful:", r);
-            const content = (r as any)?.content;
-            if (Array.isArray(content)) {
-                const first = content.find((c: any) => c?.type === 'text');
-                const text = first?.text?.trim();
-                if (text) {
-                    // プロンプトと生成結果の両方を返す
-                    return `**プロンプト:** ${prompt}\n\n**生成結果:**\n${text}`;
+            
+            // 修正: 正しいレスポンス解析
+            const response = r as any;
+            if (response?.model && response?.stopReason) {
+                // 正常なレスポンス
+                const content = response.content;
+                if (Array.isArray(content)) {
+                    const textContent = content.find((c: any) => c?.type === 'text');
+                    if (textContent?.text) {
+                        return `**プロンプト:** ${prompt}\n\n**生成結果:**\n${textContent.text.trim()}`;
+                    }
+                } else if (content?.type === 'text' && content?.text) {
+                    return `**プロンプト:** ${prompt}\n\n**生成結果:**\n${content.text.trim()}`;
                 }
             }
-        } catch (error) {
-            console.error("Sampling request failed:", error);
+        } catch (error: any) {
+            console.error("Sampling request failed with details:", {
+                error: error.message,
+                stack: error.stack,
+                code: error.code
+            });
             // フォールバックに進む
         }
     } else {
@@ -146,6 +165,7 @@ async function main() {
         const clientCapabilities = request.params.capabilities;
         clientSupportsSampling = !!clientCapabilities?.sampling;
         
+        console.error("Full client capabilities:", JSON.stringify(request.params, null, 2));
         console.error("Client capabilities:", JSON.stringify(clientCapabilities, null, 2));
         console.error("Sampling support:", clientSupportsSampling);
         
