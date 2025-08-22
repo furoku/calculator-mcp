@@ -12,6 +12,7 @@ import {
 
 // クライアントのsampling機能サポート状況を追跡
 let clientSupportsSampling = false;
+let samplingTestedSuccessfully = false;  // 実際のサンプリング成功を記録
 
 type Operator = 'add' | 'subtract' | 'multiply' | 'divide';
 const SYMBOL: Record<Operator, string> = { add: '+', subtract: '-', multiply: '×', divide: '÷' };
@@ -51,7 +52,8 @@ async function sampleStory(server: Server, a: number, b: number, symbol: string,
     console.error(`Sampling requested for: ${a} ${symbol} ${b} = ${result}`);
 
     // 1) まずクライアント経由の sampling を試みる
-    if (clientSupportsSampling) {
+    // 初期化時に false でも、実行時には試してみる（VS Code の場合）
+    if (clientSupportsSampling || !samplingTestedSuccessfully) {
         try {
             const prompt = `結果 ${a} ${symbol} ${b} = ${result} を題材に短い創作的提案をください (200文字以内)`;
             const r = await server.request({
@@ -76,6 +78,10 @@ async function sampleStory(server: Server, a: number, b: number, symbol: string,
             }, z.any());
             console.error("Sampling request successful:", r);
             
+            // 成功したらフラグを更新
+            samplingTestedSuccessfully = true;
+            clientSupportsSampling = true;
+            
             // 修正: 正しいレスポンス解析
             const response = r as any;
             if (response?.model && response?.stopReason) {
@@ -96,6 +102,13 @@ async function sampleStory(server: Server, a: number, b: number, symbol: string,
                 stack: error.stack,
                 code: error.code
             });
+            
+            // 初回テスト失敗を記録
+            if (!samplingTestedSuccessfully) {
+                samplingTestedSuccessfully = true;
+                clientSupportsSampling = false;
+                console.error("Sampling test failed - will use fallback for future requests");
+            }
             // フォールバックに進む
         }
     } else {
