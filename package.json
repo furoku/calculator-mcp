@@ -1,6 +1,6 @@
 {
   "name": "calculator-mcp",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "main": "build/index.js",
   "type": "module",
   "bin": {
@@ -10,7 +10,12 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc && chmod 755 build/index.js"
   },
-  "keywords": ["mcp", "model-context-protocol", "template", "calculator"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "template",
+    "calculator"
+  ],
   "author": "furoku",
   "license": "MIT",
   "description": "Template for building Model Context Protocol servers (calculator example included).",
