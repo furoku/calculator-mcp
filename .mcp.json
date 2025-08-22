@@ -3,7 +3,7 @@
     "Calculator-MCP": {
       "command": "npx",
       "args": [
-        "@furoku/calculator-mcp@latest"
+        "calculator-mcp@latest"
       ],
       "env": {}
     }

@@ -17,9 +17,9 @@ The Calculator MCP Server is a creative storytelling tool that performs arithmet
 - Node.js 18+
 
 ### Published Package
-This MCP server is available as a published npm package: `@furoku/calculator-mcp`
+This MCP server is available as a published npm package: `calculator-mcp`
 - No need to clone the repository locally
-- Can be run directly via `npx @furoku/calculator-mcp@latest`
+- Can be run directly via `npx calculator-mcp@latest`
 - See setup instructions below for Claude Code
 
 ### Build locally
@@ -32,7 +32,7 @@ npm run build
 ## Setup: Claude Code (CLI)
 Use this one-line command:
 ```bash
-claude mcp add Calculator-MCP -s user -- npx @furoku/calculator-mcp@latest
+claude mcp add Calculator-MCP -s user -- npx calculator-mcp@latest
 ```
 To remove the server from Claude Code:
 ```bash
@@ -46,7 +46,7 @@ claude mcp remove Calculator-MCP
 
 Add via CLI:
 ```bash
-code --add-mcp '{"name":"Calculator-MCP","command":"npx","args":["@furoku/calculator-mcp@latest"]}'
+code --add-mcp '{"name":"Calculator-MCP","command":"npx","args":["calculator-mcp@latest"]}'
 ```
 </details>
 
@@ -101,7 +101,7 @@ Follow the MCP install guide:
 
 ## Troubleshooting
 - Ensure Node 18+
-- For npx usage: `npx @furoku/calculator-mcp@latest` should work without local build
+- For npx usage: `npx calculator-mcp@latest` should work without local build
 - For local development: use absolute path to `build/index.js`
 
 ## References

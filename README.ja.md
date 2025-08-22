@@ -16,9 +16,9 @@ Calculator MCP サーバーは、四則演算を行い、その結果を創作�
 - Node.js 18+
 
 ### パブリッシュされたパッケージ
-この MCP サーバーは公開された npm パッケージ `@furoku/calculator-mcp` として利用できます。
+この MCP サーバーは公開された npm パッケージ `calculator-mcp` として利用できます。
 - リポジトリをローカルにクローンする必要はありません
-- `npx @furoku/calculator-mcp@latest` で直接実行できます
+- `npx calculator-mcp@latest` で直接実行できます
 - 以下の Claude Code のセットアップ手順を参照してください
 
 ### ローカルでビルド
@@ -31,7 +31,7 @@ npm run build
 ## セットアップ: Claude Code (CLI)
 以下のワンラインコマンドを使用してください：
 ```bash
-claude mcp add Calculator-MCP -s user -- npx @furoku/calculator-mcp@latest
+claude mcp add Calculator-MCP -s user -- npx calculator-mcp@latest
 ```
 Claude Code からサーバーを削除する場合：
 ```bash
@@ -45,7 +45,7 @@ claude mcp remove Calculator-MCP
 
 CLI で追加：
 ```bash
-code --add-mcp '{"name":"Calculator-MCP","command":"npx","args":["@furoku/calculator-mcp@latest"]}'
+code --add-mcp '{"name":"Calculator-MCP","command":"npx","args":["calculator-mcp@latest"]}'
 ```
 </details>
 
@@ -100,7 +100,7 @@ MCP インストールガイドに従ってください：
 
 ## トラブルシューティング
 - Node 18+ が必要です
-- npx での使用: `npx @furoku/calculator-mcp@latest` がローカルビルドなしで動作するはずです
+- npx での使用: `npx calculator-mcp@latest` がローカルビルドなしで動作するはずです
 - ローカル開発の場合: `build/index.js` への絶対パスを使用してください
 
 ## 参考資料

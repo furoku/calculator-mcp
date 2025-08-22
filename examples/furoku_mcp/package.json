@@ -1,0 +1,35 @@
+{
+  "name": "@furoku/furoku-mcp",
+  "version": "0.1.0",
+  "description": "Personal experimental MCP server (extensible tool collection).",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "furoku-mcp": "build/index.js"
+  },
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "build": "tsc && chmod 755 build/index.js",
+    "dev": "tsc --watch",
+    "lint": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "experimental",
+    "tools"
+  ],
+  "author": "furoku",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.3",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "typescript": "^5.9.2"
+  }
+}
