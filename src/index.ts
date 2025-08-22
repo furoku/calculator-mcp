@@ -54,6 +54,7 @@ async function main() {
     }, {
         capabilities: {
             tools: {},
+            sampling: {}
         },
     });
 
@@ -99,9 +100,10 @@ async function main() {
                 
                 // MCP Sampling を使用してAIにストーリー生成を依頼
                 try {
+                    console.error("Attempting sampling request...");
                     const samplingResult = await server.request(
                         {
-                            method: "sampling/create",
+                            method: "sampling/createMessage",
                             params: {
                                 messages: [
                                     {
@@ -113,17 +115,19 @@ async function main() {
                                     }
                                 ],
                                 maxTokens: 300,
-                                temperature: 0.7
+                                temperature: 0.7,
+                                includeContext: "thisServer"
                             }
                         },
                         CreateMessageRequestSchema
                     );
+                    console.error("Sampling request successful:", samplingResult);
                     
                     // 正しいレスポンス構造に対応
                     const samplingResponse = samplingResult as any;
-                    const generatedText = samplingResponse.result?.content?.type === "text" 
-                        ? samplingResponse.result.content.text 
-                        : "ストーリー生成に失敗しました";
+                    const generatedText = samplingResponse.content?.[0]?.text || 
+                                        samplingResponse.result?.content?.[0]?.text ||
+                                        "ストーリー生成に失敗しました";
                     
                     return { 
                         content: [
@@ -133,7 +137,7 @@ async function main() {
                     };
                 } catch (samplingError: any) {
                     // Sampling が利用できない場合はフォールバック
-                    console.error("Sampling failed:", samplingError);
+                    console.error("Sampling failed:", samplingError.message || samplingError);
                     return { content: [{ type: "text", text: `計算式: ${a} ${operatorSymbol} ${b} = ${result}` }] };
                 }
             } catch (error: any) {
