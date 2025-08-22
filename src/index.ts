@@ -1,254 +1,153 @@
 #!/usr/bin/env node
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
-import { 
-    ListToolsRequestSchema, 
-    CallToolRequestSchema, 
-    Tool,
-    InitializeRequestSchema,
-    CallToolRequest
+import {
+  ListToolsRequestSchema,
+  CallToolRequestSchema,
+  Tool,
+  InitializeRequestSchema,
+  CallToolRequest
 } from "@modelcontextprotocol/sdk/types.js";
 
-// クライアントのsampling機能サポート状況を追跡
-let clientSupportsSampling = false;
-let samplingTestedSuccessfully = false;  // 実際のサンプリング成功を記録
-let vsCodeEnvironment = false;  // VS Code環境かどうかを追跡
+// ---- 設定/状態 ----
+type Operator = "add" | "subtract" | "multiply" | "divide";
+const SYMBOL: Record<Operator, string> = { add: "+", subtract: "−", multiply: "×", divide: "÷" };
 
-type Operator = 'add' | 'subtract' | 'multiply' | 'divide';
-const SYMBOL: Record<Operator, string> = { add: '+', subtract: '-', multiply: '×', divide: '÷' };
+const state = {
+  samplingTested: false,
+  samplingAvailable: false
+};
 
-
-// --- 1. コア機能: 四則演算を行う関数 ---
-// 外部APIは不要なので、シンプルなローカル関数です。
-/**
- * 2つの数値に対して四則演算を行う
- * @param a 1つ目の数値
- * @param b 2つ目の数値
- * @param operator 実行する演算子
- * @returns 計算結果の数値
- */
-function calculate(a: number, b: number, operator: Operator): number {
-    console.error(`Calculating: ${a} ${operator} ${b}`);
-    switch (operator) {
-        case 'add':
-            return a + b;
-        case 'subtract':
-            return a - b;
-        case 'multiply':
-            return a * b;
-        case 'divide':
-            if (b === 0) {
-                throw new Error("Cannot divide by zero.");
-            }
-            return a / b;
-        default:
-            // このケースは inputSchema の enum により通常は発生しない
-            throw new Error(`Unknown operator: ${operator}`);
-    }
+// ---- 四則演算 ----
+function calculate(a: number, b: number, op: Operator): number {
+  switch (op) {
+    case "add": return a + b;
+    case "subtract": return a - b;
+    case "multiply": return a * b;
+    case "divide":
+      if (b === 0) throw new Error("Cannot divide by zero.");
+      return a / b;
+  }
 }
 
-// フォールバックストーリー生成（改善版）
-async function sampleStory(server: Server, a: number, b: number, symbol: string, result: number): Promise<string | null> {
-    console.error(`Sampling requested for: ${a} ${symbol} ${b} = ${result}`);
-    console.error(`clientSupportsSampling: ${clientSupportsSampling}, samplingTestedSuccessfully: ${samplingTestedSuccessfully}`);
-
-    // 1) サンプリング機能を試みる
-    // VS Code環境では初期化時の報告に関わらずサンプリングを試みる
-    const shouldAttemptSampling = clientSupportsSampling || vsCodeEnvironment || !samplingTestedSuccessfully;
-    
-    if (shouldAttemptSampling) {
-        try {
-            const prompt = `結果 ${a} ${symbol} ${b} = ${result} を題材に短い創作的提案をください (200文字以内)`;
-            
-            console.error("Attempting sampling request...");
-            
-            const r = await server.createMessage({
-                messages: [{
-                    role: 'user',
-                    content: {
-                        type: 'text',
-                        text: prompt
-                    }
-                }],
-                maxTokens: 300,
-                temperature: 0.7,
-                includeContext: 'none',
-                modelPreferences: {
-                    hints: [{
-                        name: "claude-3-haiku-20240307"
-                    }]
-                }
-            });
-            
-            console.error("Sampling request successful:", JSON.stringify(r, null, 2));
-            
-            // サンプリングが成功したことを記録
-            samplingTestedSuccessfully = true;
-            if (!clientSupportsSampling) {
-                console.error("Note: Sampling worked despite clientSupportsSampling being false");
-                console.error("This is expected behavior in VS Code - sampling requires user consent at runtime");
-                clientSupportsSampling = true; // 実際に動作したので更新
-            }
-            
-            // 応答の扱い（content は単一オブジェクト）
-            if (r?.content?.type === "text" && r.content.text?.trim()) {
-                return `**プロンプト:** ${prompt}\n\n**生成結果:**\n${r.content.text.trim()}`;
-            }
-            
-            console.error("Unexpected response format:", r);
-            throw new Error("Invalid response format from sampling");
-            
-        } catch (error: any) {
-            console.error("Sampling request failed:", {
-                message: error.message,
-                code: error.code,
-                details: error
-            });
-            
-            // エラーコードでサポート状況を判断
-            if (error.code === 'MethodNotFound' || error.code === 'UnsupportedOperation') {
-                clientSupportsSampling = false;
-                samplingTestedSuccessfully = true; // テスト済みで非対応と確定
-                vsCodeEnvironment = false; // VS Codeではないか、古いバージョンの可能性
-            } else if (error.message?.includes('User denied') || error.message?.includes('cancelled')) {
-                // ユーザーが拒否した場合
-                console.error("User denied sampling permission - will use fallback");
-            }
-            // それ以外のエラーは再試行可能
-        }
+// ---- ストーリー生成（クライアントサンプリング or ローカルFallback）----
+async function genStory(server: Server, a: number, b: number, symbol: string, result: number): Promise<string> {
+  // 1) クライアントサンプリング：一度成功したら以後は常に使う。失敗したら以後は使わない。
+  if (!state.samplingTested || state.samplingAvailable) {
+    try {
+      const prompt = `結果「${a} ${symbol} ${b} = ${result}」から、200文字以内の短い創作的な提案を1つください。`;
+      const r: any = await server.createMessage({
+        messages: [{ role: "user", content: { type: "text", text: prompt } }],
+        maxTokens: 300,
+        temperature: 0.7,
+        includeContext: "none"
+      });
+      state.samplingTested = true;
+      const text = r?.content?.type === "text" ? (r.content.text ?? "").trim() : "";
+      if (text) {
+        state.samplingAvailable = true;
+        return text;
+      }
+      throw new Error("Invalid sampling response");
+    } catch {
+      state.samplingTested = true;
+      state.samplingAvailable = false;
     }
+  }
 
-    // 2) ローカルの簡易サンプラー
-    console.error("Using local fallback sampler");
-    
-    const templates = [
-        `${a} ${symbol} ${b} = ${result}。この計算から生まれる物語：数字たちが踊りながら答えを見つけていく。`,
-        `計算結果 ${result} が語りかける：「私は ${a} と ${b} の出会いから生まれました」と小さくささやく。`,
-        `${result} という答えが、静かな教室の黒板に白いチョークで書かれ、明日への希望を描いている。`
-    ];
-    
-    const selectedTemplate = templates[Math.floor(Math.random() * templates.length)];
-    
-    if (selectedTemplate.length > 200) {
-        return selectedTemplate.slice(0, 197) + '...';
-    }
-    return selectedTemplate;
+  // 2) Fallback（200字以内）
+  const templates = [
+    `${a} ${symbol} ${b} = ${result}。数字たちが静かに並び替わり、答えが黒板に浮かぶ小さな瞬き。`,
+    `計算結果 ${result} は、${a} と ${b} の出会いが結ぶ輪郭。「ここから次の一歩へ」と囁く。`,
+    `${result} と書かれた白いチョークの粉が舞い、短い物語が教室の空気に滲む。`
+  ];
+  const t = templates[Math.floor(Math.random() * templates.length)];
+  return t.length > 200 ? t.slice(0, 197) + "..." : t;
 }
 
-// --- 2. MCPサーバーのメイン処理 ---
+// ---- メイン ----
 async function main() {
-    const server = new Server({
-        name: "Calculator-MCP-Tool",
-        version: "1.0.0",
-    }, {
-        capabilities: {
-            tools: {}
+  const server = new Server(
+    { name: "Calculator-MCP-Tool", version: "1.0.0" },
+    { capabilities: { tools: {} } }
+  );
+
+  const tools: Tool[] = [
+    {
+      name: "calculator",
+      description:
+        "2つの数値に対して四則演算を実行します。可能ならクライアント側のサンプリングで短い創作提案を付けます。",
+      inputSchema: {
+        type: "object",
+        properties: {
+          a: { type: "number", description: "1つ目の数値" },
+          b: { type: "number", description: "2つ目の数値" },
+          operator: {
+            type: "string",
+            description: "実行する演算子",
+            enum: ["add", "subtract", "multiply", "divide"]
+          }
         },
-    });
+        required: ["a", "b", "operator"]
+      }
+    }
+  ];
 
-    const tools: Tool[] = [
-        {
-            name: "calculator",
-            description: "2つの数値に対して四則演算を実行します。サンプリング機能が利用可能な場合は、計算結果から創作的なストーリー提案も生成します。",
-            inputSchema: {
-                type: "object",
-                properties: {
-                    a: {
-                        type: "number",
-                        description: "1つ目の数値",
-                    },
-                    b: {
-                        type: "number",
-                        description: "2つ目の数値",
-                    },
-                    operator: {
-                        type: "string",
-                        description: "実行する演算子",
-                        // enum を使うことで、AIに有効な選択肢を明確に伝えられる
-                        enum: ['add', 'subtract', 'multiply', 'divide'],
-                    },
-                },
-                required: ["a", "b", "operator"],
-            },
-        },
-    ];
+  // Initialize: クライアントのcapabilitiesを見て初期推定（必須ではないがヒントとして使用）
+  server.setRequestHandler(InitializeRequestSchema, async (req) => {
+    const samplingCap = Boolean(req.params?.capabilities?.sampling);
+    state.samplingAvailable = samplingCap;   // 実際には createMessage を試して最終確定
+    state.samplingTested = false;
+    if (process.env.DEBUG) {
+      console.error("[init] samplingCap:", samplingCap, "protocol:", req.params.protocolVersion);
+    }
+    return {
+      protocolVersion: req.params.protocolVersion,
+      capabilities: { tools: {} },
+      serverInfo: { name: "Calculator-MCP-Tool", version: "1.0.0" }
+    };
+  });
 
-    // 初期化ハンドラー（デバッグ情報を追加）
-    server.setRequestHandler(InitializeRequestSchema, async (request) => {
-        const clientCapabilities = request.params.capabilities;
-        clientSupportsSampling = !!clientCapabilities?.sampling;
-        
-        // VS Code環境の検出
-        const clientInfo = request.params.clientInfo;
-        if (clientInfo?.name && clientInfo.name.toLowerCase().includes('vscode')) {
-            vsCodeEnvironment = true;
-            console.error("VS Code environment detected - sampling may work despite initial capability report");
-        }
-        
-        console.error("=== Initialize Debug Info ===");
-        console.error("Full request params:", JSON.stringify(request.params, null, 2));
-        console.error("Client capabilities:", JSON.stringify(clientCapabilities, null, 2));
-        console.error("Sampling capability reported:", clientSupportsSampling);
-        console.error("VS Code environment:", vsCodeEnvironment);
-        console.error("Client info:", JSON.stringify(clientInfo, null, 2));
-        console.error("Protocol version:", request.params.protocolVersion);
-        console.error("============================");
-        
-        return {
-            protocolVersion: request.params.protocolVersion,
-            capabilities: {
-                tools: {}
-            },
-            serverInfo: {
-                name: "Calculator-MCP-Tool",
-                version: "1.0.0"
-            }
-        };
-    });
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 
-    // `ListTools` リクエストが来たら、上で定義したツールのリストを返す
-    server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
+  server.setRequestHandler(CallToolRequestSchema, async (req: CallToolRequest) => {
+    const { name, arguments: args } = req.params;
+    if (name !== "calculator") throw new Error(`Unknown tool: ${name}`);
 
-    // --- 4. ツールの実行 (AIから「使って」と言われたときの処理) ---
-    server.setRequestHandler(CallToolRequestSchema, async (req: CallToolRequest) => {
-        const { name, arguments: args } = req.params;
+    const { a, b, operator } = (args ?? {}) as { a: unknown; b: unknown; operator: Operator };
+    if (
+      typeof a !== "number" ||
+      typeof b !== "number" ||
+      !operator ||
+      !(operator in SYMBOL)
+    ) {
+      return { content: [{ type: "text", text: "無効な入力です。" }] };
+    }
 
-        if (name === "calculator") {
-            const { a, b, operator } = args as { a: number; b: number; operator: Operator };
-            if (typeof a !== 'number' || typeof b !== 'number' || !SYMBOL[operator]) {
-                return { content: [{ type: 'text', text: '無効な入力です。' }] };
-            }
-            try {
-                const result = calculate(a, b, operator);
-                const symbol = SYMBOL[operator];
-                const story = await sampleStory(server, a, b, symbol, result);
-                
-                const response = [
-                    { type: 'text', text: `計算式: ${a} ${symbol} ${b} = ${result}` }
-                ];
-                
-                if (story) {
-                    response.push({ type: 'text', text: `**創作ストーリー提案:**\n${story}` });
-                } else {
-                    response.push({ type: 'text', text: `*ストーリー生成に失敗しました（詳細はログを確認してください）*` });
-                }
-                
-                return { content: response };
-            } catch (e: any) {
-                return { content: [{ type: 'text', text: `エラー: ${e.message}` }] };
-            }
-        }
+    try {
+      const result = calculate(a, b, operator);
+      const symbol = SYMBOL[operator];
+      const story = await genStory(server, a, b, symbol, result);
 
-        throw new Error(`Unknown tool: ${name}`);
-    });
+      return {
+        content: [
+          { type: "text", text: `計算式: ${a} ${symbol} ${b} = ${result}` },
+          { type: "text", text: `創作提案: ${story}` }
+        ]
+      };
+    } catch (e: any) {
+      const msg = e?.message ?? "Unknown error";
+      if (process.env.DEBUG) console.error("[calculator] error:", msg);
+      return { content: [{ type: "text", text: `エラー: ${msg}` }] };
+    }
+  });
 
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.error("Calculator MCP server started and connected via stdio.");
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  if (process.env.DEBUG) console.error("Calculator MCP server started (stdio).");
 }
 
-main().catch(err => {
-    console.error("Fatal error in MCP server:", err);
-    process.exit(1);
+main().catch((err) => {
+  console.error("Fatal error in MCP server:", err);
+  process.exit(1);
 });
