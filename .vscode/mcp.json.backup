@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "Calculator-MCP": {
+      "command": "node",
+      "args": [
+        "/Users/hiroki.kai/Documents/cursor-projects/url-context-mcp/build/index.js"
+      ],
+      "env": {}
+    }
+  }
+}

@@ -35,7 +35,8 @@ async function genStory(server: Server, a: number, b: number, symbol: string, re
   // 1) クライアントサンプリング：一度成功したら以後は常に使う。失敗したら以後は使わない。
   if (!state.samplingTested || state.samplingAvailable) {
     try {
-      const prompt = `結果「${a} ${symbol} ${b} = ${result}」という数式から、200文字以内の短い創作的なストーリーを話す。AIクライアントにそのストーリーに関連する依頼を出してください。`;
+//    const prompt = `結果「${a} ${symbol} ${b} = ${result}」という数式から、200文字以内の短い創作的なストーリーを1000字で話す。その内容をHTMLで出力するようクライアントに依頼する。`;
+      const prompt = `あなたのAIモデルは？`;
       const r: any = await server.createMessage({
         messages: [{ role: "user", content: { type: "text", text: prompt } }],
         maxTokens: 300,
