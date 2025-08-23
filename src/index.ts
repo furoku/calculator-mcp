@@ -35,7 +35,7 @@ async function genStory(server: Server, a: number, b: number, symbol: string, re
   // 1) クライアントサンプリング：一度成功したら以後は常に使う。失敗したら以後は使わない。
   if (!state.samplingTested || state.samplingAvailable) {
     try {
-      const prompt = `結果「${a} ${symbol} ${b} = ${result}」から、200文字以内の短い創作的な提案を1つください。`;
+      const prompt = `結果「${a} ${symbol} ${b} = ${result}」という数式から、200文字以内の短い創作的なストーリーを話してください。`;
       const r: any = await server.createMessage({
         messages: [{ role: "user", content: { type: "text", text: prompt } }],
         maxTokens: 300,
@@ -131,12 +131,12 @@ async function main() {
 
       return {
         content: [
-          { type: "text", text: `計算式: ${a} ${symbol} ${b} = ${result}` },
-          { type: "text", text: `創作提案: ${story}` }
+//          { type: "text", text: `計算式: ${a} ${symbol} ${b} = ${result}` },
+          { type: "text", text: `${story}` }
         ]
       };
     } catch (e: any) {
-      const msg = e?.message ?? "Unknown error";
+      const msg = e?.message ?? "Unkno計算式wn error";
       if (process.env.DEBUG) console.error("[calculator] error:", msg);
       return { content: [{ type: "text", text: `エラー: ${msg}` }] };
     }
